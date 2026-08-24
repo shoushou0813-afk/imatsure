@@ -1,0 +1,202 @@
+// イマツレ スキーマ
+// SQLite は enum / 配列 を持てないので、区分値は String + コメントで表現する。
+// 本番で PostgreSQL に移す時は provider を "postgresql" に変えるだけで動く。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  handle       String   @unique
+  displayName  String
+  passwordHash String
+  role         String   @default("user")   // user | local | mod
+  trustScore   Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  trips   Trip[]
+  threads Thread[]
+  posts   Post[]
+  rules   Rule[]
+  reports Report[]
+  verifications RuleVerification[]
+}
+
+model Area {
+  id         Int    @id @default(autoincrement())
+  name       String
+  slug       String @unique
+  prefecture String
+  spots      Spot[]
+}
+
+model Spot {
+  id         Int     @id @default(autoincrement())
+  areaId     Int
+  name       String
+  slug       String  @unique
+  kind       String  // 堤防 | 地磯 | 砂浜 | 河口 | 港
+  lat        Float
+  lng        Float
+  accessNote String?
+
+  area    Area     @relation(fields: [areaId], references: [id])
+  trips   Trip[]
+  threads Thread[]
+  rules   Rule[]
+
+  @@index([areaId])
+}
+
+model Fish {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  kana     String
+  slug     String  @unique
+  category String  // 青物 | 根魚 | イカ | 投げ | その他
+  catches  Catch[]
+}
+
+model Method {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  slug  String @unique
+  trips Trip[]
+}
+
+/// 中心テーブル：1レコード＝1釣行（1匹ではない）
+model Trip {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  spotId     Int
+  methodId   Int
+  startedAt  DateTime
+  endedAt    DateTime?
+  tideName   String?  // 大潮 / 中潮 / 小潮 / 長潮 / 若潮
+  tidePhase  String?  // 上げ3分 など
+  weather    String?
+  windDir    String?
+  windSpeed  Float?
+  waterTemp  Float?
+  note       String?
+  precision  String   @default("area") // exact | area | city | hidden
+  isSkunked  Boolean  @default(false)  // ボウズ
+  deletedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  spot    Spot    @relation(fields: [spotId], references: [id])
+  method  Method  @relation(fields: [methodId], references: [id])
+  catches Catch[]
+  photos  Photo[]
+
+  @@index([spotId, startedAt])
+  @@index([startedAt])
+}
+
+model Catch {
+  id       Int     @id @default(autoincrement())
+  tripId   Int
+  fishId   Int
+  sizeCm   Float?
+  weightG  Int?
+  sizeNote String?  // 「指3本」のような数値化できないサイズ
+  count    Int     @default(1)
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  fish Fish @relation(fields: [fishId], references: [id])
+
+  @@index([tripId])
+  @@index([fishId])
+}
+
+model Photo {
+  id       Int    @id @default(autoincrement())
+  tripId   Int
+  url      String
+  width    Int?
+  height   Int?
+  sortOrder Int   @default(0)
+  trip     Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+}
+
+model Thread {
+  id           Int      @id @default(autoincrement())
+  spotId       Int
+  userId       Int
+  title        String
+  category     String   // 質問 | 募集 | 現地情報 | 雑談
+  isLocked     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  lastPostedAt DateTime @default(now())
+
+  spot  Spot   @relation(fields: [spotId], references: [id])
+  user  User   @relation(fields: [userId], references: [id])
+  posts Post[]
+
+  @@index([spotId, lastPostedAt])
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  threadId  Int
+  userId    Int
+  body      String
+  replyToId Int?
+  createdAt DateTime @default(now())
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([threadId])
+}
+
+/// 差別化の核：釣り場ごとの立入禁止・駐車・地元ルール・安全情報
+model Rule {
+  id        Int       @id @default(autoincrement())
+  spotId    Int
+  userId    Int
+  kind      String    // 立入禁止 | 駐車 | 地元ルール | 安全
+  title     String
+  body      String
+  source    String?
+  expiresAt DateTime?
+  status    String    @default("active") // active | hidden
+  createdAt DateTime  @default(now())
+
+  spot          Spot   @relation(fields: [spotId], references: [id])
+  user          User   @relation(fields: [userId], references: [id])
+  verifications RuleVerification[]
+
+  @@index([spotId])
+}
+
+model RuleVerification {
+  id        Int      @id @default(autoincrement())
+  ruleId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  rule Rule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([ruleId, userId])
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  targetType String   // trip | post | rule
+  targetId   Int
+  userId     Int
+  reason     String
+  status     String   @default("open") // open | closed
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

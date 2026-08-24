@@ -1,0 +1,32 @@
+{
+  "name": "imatsure-server",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "db:push": "prisma db push --skip-generate",
+    "db:seed": "node prisma/seed.js",
+    "db:setup": "prisma db push --skip-generate && prisma generate && node prisma/seed.js",
+    "db:reset": "prisma db push --force-reset --skip-generate && prisma generate && node prisma/seed.js",
+    "generate": "prisma generate",
+    "ensure-env": "node scripts/ensure-env.js",
+    "predev": "node scripts/ensure-env.js",
+    "prestart": "node scripts/ensure-env.js",
+    "predb:setup": "node scripts/ensure-env.js",
+    "predb:reset": "node scripts/ensure-env.js",
+    "predb:push": "node scripts/ensure-env.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "prisma": "^6.1.0"
+  }
+}
