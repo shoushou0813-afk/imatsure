@@ -6,6 +6,7 @@ import SpotThreads from "./pages/SpotThreads";
 import SpotRules from "./pages/SpotRules";
 import ThreadDetail from "./pages/ThreadDetail";
 import TripNew from "./pages/TripNew";
+import TripPage from "./pages/TripPage";
 import Login from "./pages/Login";
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/spots/:slug/rules" element={<SpotRules />} />
         <Route path="/threads/:id" element={<ThreadDetail />} />
         <Route path="/trips/new" element={<TripNew />} />
+        <Route path="/trips/:id" element={<TripPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

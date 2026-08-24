@@ -3,6 +3,15 @@
 > 「記録するSNS」ではなく、**明日の釣行を10秒で決めるための掲示板**。
 > アングラーズより見やすい、を検証可能な設計に落とした実装スキャフォールドです。
 
+**ドキュメント**
+
+| | |
+|---|---|
+| [docs/01-design-note.md](docs/01-design-note.md) | なぜこの形なのか。競合分析・差別化の4本柱・見やすさの設計原則 |
+| [docs/02-monetization.md](docs/02-monetization.md) | 収益設計。モデル7案・フェーズ別試算・やらないこと |
+| [docs/03-prototype.md](docs/03-prototype.md) | 画面プロトタイプと、サイクル1で測った数字 |
+| [GLOSSARY.md](GLOSSARY.md) | 用語集。分からない言葉が出たらここ |
+
 ---
 
 ## 1. これは何か
@@ -95,10 +104,38 @@ imatsure/
 「今日／昨日／N日前」を返し、CSS の `.fresh.f0〜f3` が色の濃さに変換します。
 日付の文字を読ませず、視線を止めずに新旧が分かるようにするためです。
 
-### ③ テキストファースト
+### ③ テキストファースト（写真の扱い）
 
 一覧に写真を出しません。釣り場は電波が弱く、写真8枚で数MB、テキストなら数十KBです。
-写真は行を開いてから読み込みます。
+一覧には「写真 3」という**文字**だけを出し、実際の画像は行を開いてから `loading="lazy"` で読み込みます。
+
+**写真投稿の流れ**
+
+1. 投稿画面で写真を選ぶ → その場で `POST /api/photos` に送る（まだDBには入らない）
+2. サーバが Exif から**撮影日時だけ**を読み取って返す → 開始日時の欄が自動で埋まる
+3. sharp で長辺1600pxの表示用と480pxのサムネに変換して保存。
+   **この変換で Exif（GPS を含む）は完全に消える**
+4. 「この釣行を投稿する」で `POST /api/trips` に画像URLを渡し、`Photo` レコードが作られる
+
+関連ファイル：`server/src/storage.js`（保存と変換）、`server/src/routes/photos.js`（受け口）、
+`client/src/components/PhotoPicker.jsx`（選択UI）、`PhotoGallery.jsx`（表示）
+
+**制限**
+
+| 項目 | 値 | 変える場所 |
+|---|---|---|
+| 1釣行あたりの枚数 | 3枚 | `routes/photos.js` の `FREE_PHOTOS_PER_TRIP` |
+| 1枚のサイズ上限 | 12MB | `routes/photos.js` の `MAX_BYTES` |
+| 対応形式 | JPEG / PNG / WebP | `routes/photos.js` の `ALLOWED` |
+| 表示用の長辺 | 1600px | `storage.js` の `DISPLAY_MAX` |
+
+> **iPhoneのHEICについて**：iOSのカメラは既定でHEIC形式です。Safariのファイル選択では
+> 多くの場合JPEGに変換されて送られますが、変換されないケースもあります。
+> 本番前に実機で確認し、必要なら sharp に libheif を入れるか、ブラウザ側で変換してください。
+
+> **保存先の差し替え**：いまはサーバのディスク（`server/uploads/`）に置いています。
+> 本番では `storage.js` の `saveImage` / `deleteImage` だけを Cloudflare R2 などの
+> S3互換ストレージに書き換えれば移行できます。呼び出し側は変更不要です。
 
 ### ④ ルールを釣況より上に
 
@@ -120,6 +157,7 @@ imatsure/
 | POST | `/api/trips` | 釣行＋釣果をまとめて投稿 |
 | GET/POST | `/api/threads` | スレッド一覧・作成 |
 | POST | `/api/threads/:id/posts` | 返信 |
+| POST | `/api/photos` | 写真1枚をアップロード（Exif削除＋リサイズ、撮影日時を返す） |
 | GET/POST | `/api/rules` | ルール一覧・追加 |
 | POST | `/api/rules/:id/verify` | 「現地で確認した」 |
 | POST | `/api/auth/register` `/login` `/logout` | 認証 |
@@ -132,7 +170,9 @@ imatsure/
 
 コード中に `TODO(学習):` と書いてある箇所が手を入れるポイントです。
 
-- [ ] 写真アップロード（`Photo` テーブルは用意済み、保存先が未実装）
+- [x] 写真アップロード（Exif削除・リサイズ・サムネ生成まで実装済み）
+- [ ] 保存先を S3互換ストレージ（R2）に差し替え（`storage.js` だけで済む）
+- [ ] HEIC（iPhone）対応
 - [ ] 潮汐・天候の自動取得（いまはシードの固定値）
 - [ ] 通報が3件たまったら自動で非表示にする処理（`routes/reports.js`）
 - [ ] サマリー集計のキャッシュ（`routes/spots.js`）

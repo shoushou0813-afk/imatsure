@@ -42,6 +42,8 @@ export default function TripRow({ trip, selected, onSelect }) {
         <span>{trip.spot.name}</span>
         {trip.tideName && <span>{trip.tideName}{trip.tidePhase ? ` ${trip.tidePhase}` : ""}</span>}
         {trip.windDir && <span>{trip.windDir} {trip.windSpeed}m</span>}
+        {/* 一覧に画像は出さない。「写真がある」という事実だけ文字で伝える */}
+        {trip._count?.photos > 0 && <span>写真 <span className="num">{trip._count.photos}</span></span>}
       </div>
 
       <div className="rowend">

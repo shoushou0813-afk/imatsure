@@ -12,6 +12,8 @@ import threads from "./routes/threads.js";
 import rules from "./routes/rules.js";
 import reports from "./routes/reports.js";
 import masters from "./routes/masters.js";
+import photos from "./routes/photos.js";
+import { UPLOAD_DIR } from "./storage.js";
 
 const app = express();
 
@@ -34,12 +36,20 @@ app.use((req, res, next) => {
   next();
 });
 
+// アップロードした画像を配信する。ファイル名はUUIDで一意なので、長めにキャッシュしてよい。
+app.use("/uploads", express.static(UPLOAD_DIR, {
+  maxAge: "30d",
+  immutable: true,
+  fallthrough: false,
+}));
+
 app.get("/api/health", (_req, res) => res.json({ data: { ok: true } }));
 app.use("/api/auth", auth);
 app.use("/api/spots", spots);
 app.use("/api/trips", trips);
 app.use("/api/threads", threads);
 app.use("/api/rules", rules);
+app.use("/api/photos", photos);
 app.use("/api/reports", reports);
 app.use("/api", masters);
 

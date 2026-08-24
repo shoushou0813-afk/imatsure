@@ -1,4 +1,5 @@
 import { freshness, hhmm, catchLabel } from "../format";
+import PhotoGallery from "./PhotoGallery";
 
 export default function TripDetail({ trip }) {
   if (!trip) return (
@@ -12,6 +13,7 @@ export default function TripDetail({ trip }) {
       <div className="dsub">
         {f.label} {hhmm(trip.startedAt)}{trip.endedAt && `-${hhmm(trip.endedAt)}`} ・ {trip.user.displayName}
       </div>
+      <PhotoGallery photos={trip.photos} />
       <dl className="dl-grid">
         <dt>釣果</dt>
         <dd>{trip.catches.length === 0 ? "ボウズ" : trip.catches.map((c) => {

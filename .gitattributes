@@ -1,0 +1,11 @@
+# 改行コードはリポジトリ内では LF に統一し、作業コピーは環境に合わせる。
+# これを置くと Windows の「LF will be replaced by CRLF」警告が出なくなる。
+* text=auto eol=lf
+
+# バイナリは変換しない
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary

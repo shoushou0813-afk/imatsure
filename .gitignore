@@ -1,6 +1,30 @@
+# 依存
 node_modules/
+
+# ビルド成果物
 dist/
+build/
+
+# データベース（開発用SQLite）
 *.db
 *.db-journal
+*.db-wal
+
+# 環境変数（絶対にコミットしない）
 .env
+.env.local
+.env.*.local
+
+# アップロードされた画像
+server/uploads/
+
+# OS / エディタ
 .DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# ログ
+*.log
+npm-debug.log*

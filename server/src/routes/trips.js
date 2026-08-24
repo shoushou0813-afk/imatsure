@@ -2,6 +2,8 @@ import { Router } from "express";
 import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { wrap } from "../middleware/error.js";
+import { FREE_PHOTOS_PER_TRIP } from "./photos.js";
+import { deleteImage } from "../storage.js";
 
 const r = Router();
 
@@ -10,6 +12,9 @@ const tripInclude = {
   spot: { select: { id: true, name: true, slug: true } },
   method: true,
   catches: { include: { fish: true } },
+  // 一覧では写真そのものは出さない（テキストファースト）。
+  // ただし「写真あり」の印と、詳細を開いた時の初期表示のために1枚だけサムネを持ってくる。
+  photos: { select: { id: true, thumbUrl: true }, orderBy: { sortOrder: "asc" }, take: 1 },
   _count: { select: { photos: true } },
 };
 
@@ -45,7 +50,7 @@ r.get("/", wrap(async (req, res) => {
 r.get("/:id", wrap(async (req, res) => {
   const trip = await prisma.trip.findFirst({
     where: { id: Number(req.params.id), deletedAt: null },
-    include: { ...tripInclude, photos: true },
+    include: { ...tripInclude, photos: { orderBy: { sortOrder: "asc" } } },
   });
   if (!trip) return res.status(404).json({ error: { message: "釣行が見つかりません" } });
   res.json({ data: trip });
@@ -54,10 +59,19 @@ r.get("/:id", wrap(async (req, res) => {
 /** 釣行＋釣果をまとめて1リクエストで作る（画面の入力単位と揃える）。 */
 r.post("/", requireAuth, wrap(async (req, res) => {
   const { spotId, methodId, startedAt, endedAt, tideName, tidePhase, weather,
-          windDir, windSpeed, waterTemp, note, precision, catches = [] } = req.body;
+          windDir, windSpeed, waterTemp, note, precision, catches = [], photos = [] } = req.body;
 
   if (!spotId || !methodId || !startedAt)
     return res.status(400).json({ error: { message: "spotId / methodId / startedAt は必須です" } });
+
+  if (photos.length > FREE_PHOTOS_PER_TRIP)
+    return res.status(400).json({ error: { message: `写真は1釣行あたり${FREE_PHOTOS_PER_TRIP}枚までです` } });
+
+  // アップロード済みの画像だけを受け付ける。クライアントから任意のURLを書き込ませない。
+  const safePhotos = photos.filter(
+    (p) => typeof p?.url === "string" && p.url.startsWith("/uploads/") &&
+           typeof p?.thumbUrl === "string" && p.thumbUrl.startsWith("/uploads/")
+  );
 
   const trip = await prisma.trip.create({
     data: {
@@ -80,6 +94,13 @@ r.post("/", requireAuth, wrap(async (req, res) => {
           weightG: c.weightG != null ? Number(c.weightG) : null,
           sizeNote: c.sizeNote || null,
           count: Number(c.count) || 1,
+        })),
+      },
+      photos: {
+        create: safePhotos.map((p, i) => ({
+          url: p.url, thumbUrl: p.thumbUrl,
+          width: p.width ?? null, height: p.height ?? null, bytes: p.bytes ?? null,
+          sortOrder: i,
         })),
       },
     },
@@ -107,6 +128,12 @@ r.delete("/:id", requireAuth, wrap(async (req, res) => {
   const trip = await prisma.trip.findUnique({ where: { id } });
   if (!trip || trip.deletedAt) return res.status(404).json({ error: { message: "釣行が見つかりません" } });
   if (trip.userId !== req.user.id) return res.status(403).json({ error: { message: "他の人の釣行は削除できません" } });
+
+  // 行は論理削除で残すが、画像ファイルは実体を消す（容量がそのまま費用になるため）
+  const photos = await prisma.photo.findMany({ where: { tripId: id } });
+  await Promise.all(photos.map((p) => deleteImage(p.url)));
+  await prisma.photo.deleteMany({ where: { tripId: id } });
+
   await prisma.trip.update({ where: { id }, data: { deletedAt: new Date() } });
   res.json({ data: { ok: true } });
 }));

@@ -4,6 +4,7 @@ import { useApi } from "../useApi";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import Layout from "../components/Layout";
+import PhotoPicker from "../components/PhotoPicker";
 
 const PRECISIONS = [
   ["exact", "ピンポイント"],
@@ -28,10 +29,21 @@ export default function TripNew() {
     precision: "area", // 既定はぼかし。ピンポイントは選ばないと出ない
   });
   const [catches, setCatches] = useState([{ fishId: "", sizeCm: "", count: 1 }]);
+  const [photos, setPhotos] = useState([]);
+  const [dateTouched, setDateTouched] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  /** 写真のExifから撮影日時が読めたら、まだ手で触っていない日時欄に反映する。 */
+  const applyTakenAt = (iso) => {
+    if (dateTouched) return;
+    const local = new Date(iso);
+    const pad = (n) => String(n).padStart(2, "0");
+    set("startedAt",
+      `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}`);
+  };
   const setCatch = (i, k, v) => setCatches((cs) => cs.map((c, j) => (j === i ? { ...c, [k]: v } : c)));
 
   const submit = async (e) => {
@@ -46,6 +58,7 @@ export default function TripNew() {
         catches: catches
           .filter((c) => c.fishId)
           .map((c) => ({ fishId: Number(c.fishId), sizeCm: c.sizeCm ? Number(c.sizeCm) : null, count: Number(c.count) || 1 })),
+        photos: photos.map((p) => ({ url: p.url, thumbUrl: p.thumbUrl, width: p.width, height: p.height, bytes: p.bytes })),
       };
       const r = await api.post("/trips", payload);
       nav(`/spots/${r.data.spot.slug}`);
@@ -73,9 +86,16 @@ export default function TripNew() {
             {(methods ?? []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select></div>
 
+        <div className="field"><label>写真</label>
+          <PhotoPicker photos={photos} setPhotos={setPhotos} max={3} onTakenAt={applyTakenAt} />
+        </div>
+
         <div className="field"><label htmlFor="started">開始日時</label>
           <input id="started" type="datetime-local" value={form.startedAt}
-            onChange={(e) => set("startedAt", e.target.value)} required /></div>
+            onChange={(e) => { setDateTouched(true); set("startedAt", e.target.value); }} required />
+          {photos.length > 0 && !dateTouched &&
+            <p className="hint">写真の撮影日時から自動で入れました。違っていれば直してください。</p>}
+        </div>
 
         <div className="field"><label>釣れた魚（この釣行の分をまとめて）</label>
           {catches.map((c, i) => (
