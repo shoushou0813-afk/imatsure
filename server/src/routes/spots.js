@@ -6,6 +6,7 @@ import { wrap } from "../middleware/error.js";
 import { geocodeAddress } from "../lib/geocode.js";
 import { estimateTideName } from "../lib/tide.js";
 import { fetchWeatherAt } from "../lib/weather.js";
+import { mazumeLabel } from "../lib/mazume.js";
 
 const r = Router();
 const KINDS = ["堤防", "地磯", "砂浜", "河口", "港"];
@@ -118,11 +119,13 @@ r.get("/:slug/conditions", wrap(async (req, res) => {
     return res.status(400).json({ error: { message: "日時の形式が正しくありません" } });
 
   const tideName = estimateTideName(at);
+  const mazume = mazumeLabel(at);
   const weather = await fetchWeatherAt(spot.lat, spot.lng, at).catch(() => null);
 
   res.json({
     data: {
       tideName,
+      mazume,
       weather: weather?.weather ?? null,
       windDir: weather?.windDir ?? null,
       windSpeed: weather?.windSpeed ?? null,

@@ -31,6 +31,7 @@ export default function TripNew() {
   });
   const [catches, setCatches] = useState([{ fishId: "", sizeCm: "", count: 1 }]);
   const [photos, setPhotos] = useState([]);
+  const [mazume, setMazume] = useState(null);
   const [dateTouched, setDateTouched] = useState(false);
   const [tideTouched, setTideTouched] = useState(false);
   const [condTouched, setCondTouched] = useState(false);
@@ -61,6 +62,7 @@ export default function TripNew() {
           windSpeed: condTouched ? f.windSpeed : (r.data.windSpeed ?? f.windSpeed ?? ""),
           waterTemp: condTouched ? f.waterTemp : (r.data.waterTemp ?? f.waterTemp ?? ""),
         }));
+        setMazume(r.data.mazume ?? null);
       })
       .catch(() => {})
       .finally(() => alive && setCondLoading(false));
@@ -168,7 +170,10 @@ export default function TripNew() {
                 onClick={() => { setTideTouched(true); set("tideName", t); }}>{t}</button>
             ))}
           </div>
-          <p className="hint">釣り場と開始日時から自動で見積もった値です（実際の潮回りと数日ずれることがあります）。違っていれば選び直してください。</p>
+          <p className="hint">
+            釣り場と開始日時から自動で見積もった値です（実際の潮回りと数日ずれることがあります）。違っていれば選び直してください。
+            {mazume && <> この時間帯は<b>{mazume}</b>の目安です。</>}
+          </p>
         </div>
 
         <div className="field"><label>天候・風・水温（自動取得の参考値）</label>

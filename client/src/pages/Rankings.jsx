@@ -49,17 +49,26 @@ export default function Rankings() {
           {!speciesLoading && species?.ranking?.length > 0 && (
             <div className="rank" style={{ gap: 9 }}>
               {species.ranking.map((f, i) => (
-                <div className="rank-row" key={f.name} style={{ fontSize: 15 }}>
-                  <span className="no">{i + 1}</span>
-                  <span className="nm">{f.name}</span>
-                  <span
-                    className={`trend t-${f.trend}`}
-                    aria-label={`前週比 ${TREND_LABEL[f.trend]}`}
-                    title={`前週 ${f.prevCount}件 → 今週 ${f.count}件`}
-                  >
-                    {TREND_MARK[f.trend]} {TREND_LABEL[f.trend]}
-                  </span>
-                  <span className="num" style={{ marginLeft: "auto" }}>{f.count}</span>
+                <div key={f.name}>
+                  <div className="rank-row" style={{ fontSize: 15 }}>
+                    <span className="no">{i + 1}</span>
+                    <span className="nm">{f.name}</span>
+                    <span
+                      className={`trend t-${f.trend}`}
+                      aria-label={`前週比 ${TREND_LABEL[f.trend]}`}
+                      title={`前週 ${f.prevCount}件 → 今週 ${f.count}件`}
+                    >
+                      {TREND_MARK[f.trend]} {TREND_LABEL[f.trend]}
+                    </span>
+                    <span className="num" style={{ marginLeft: "auto" }}>{f.count}</span>
+                  </div>
+                  {/* 「何が」だけでなく「いつ」を1行で。潮回り×時間帯が集計できたときだけ出す。 */}
+                  {f.bestJiai && (
+                    <div style={{ fontSize: 12, color: "var(--ink-3)", paddingLeft: 23 }}>
+                      多いのは <b style={{ color: "var(--ink-2)" }}>{f.bestJiai.tideName}・{f.bestJiai.mazume}</b>
+                      （<span className="num">{f.bestJiai.count}</span>件）
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../db.js";
 import { wrap } from "../middleware/error.js";
 import { VERIFY_THRESHOLD } from "./trips.js";
+import { mazumeLabel } from "../lib/mazume.js";
 
 const r = Router();
 
@@ -35,7 +36,7 @@ r.get("/species", wrap(async (req, res) => {
   const [thisCatches, lastCatches] = await Promise.all([
     prisma.catch.findMany({
       where: { trip: { ...VISIBLE_TRIP, startedAt: { gte: thisWindow.start, lt: thisWindow.end }, ...where } },
-      include: { fish: true },
+      include: { fish: true, trip: { select: { tideName: true, startedAt: true } } },
     }),
     prisma.catch.findMany({
       where: { trip: { ...VISIBLE_TRIP, startedAt: { gte: lastWindow.start, lt: lastWindow.end }, ...where } },
@@ -51,11 +52,29 @@ r.get("/species", wrap(async (req, res) => {
   const thisTally = tally(thisCatches);
   const lastTally = tally(lastCatches);
 
+  // 「何が」だけでなく「いつ」も1行で分かるように、魚種ごとに一番多い
+  // 潮回り×時間帯の組み合わせを添える。潮名が入っていない古い釣行は数えない。
+  const jiaiByFish = new Map();
+  for (const c of thisCatches) {
+    if (!c.trip.tideName) continue;
+    const key = `${c.trip.tideName}・${mazumeLabel(c.trip.startedAt)}`;
+    const byKey = jiaiByFish.get(c.fish.name) ?? new Map();
+    byKey.set(key, (byKey.get(key) || 0) + c.count);
+    jiaiByFish.set(c.fish.name, byKey);
+  }
+  const bestJiai = (name) => {
+    const byKey = jiaiByFish.get(name);
+    if (!byKey) return null;
+    const [key, count] = [...byKey.entries()].sort((a, b) => b[1] - a[1])[0];
+    const [tideName, mazume] = key.split("・");
+    return { tideName, mazume, count };
+  };
+
   const ranking = [...thisTally.entries()]
     .map(([name, count]) => {
       const prevCount = lastTally.get(name) || 0;
       const trend = count > prevCount ? "up" : count < prevCount ? "down" : "flat";
-      return { name, count, prevCount, trend };
+      return { name, count, prevCount, trend, bestJiai: bestJiai(name) };
     })
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
