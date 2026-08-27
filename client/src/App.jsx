@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth";
 import Home from "./pages/Home";
+import Rankings from "./pages/Rankings";
 import SpotBoard from "./pages/SpotBoard";
+import SpotNew from "./pages/SpotNew";
 import SpotThreads from "./pages/SpotThreads";
 import SpotRules from "./pages/SpotRules";
 import ThreadDetail from "./pages/ThreadDetail";
@@ -14,6 +16,8 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/rankings" element={<Rankings />} />
+        <Route path="/spots/new" element={<SpotNew />} />
         <Route path="/spots/:slug" element={<SpotBoard />} />
         <Route path="/spots/:slug/threads" element={<SpotThreads />} />
         <Route path="/spots/:slug/rules" element={<SpotRules />} />

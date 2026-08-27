@@ -9,27 +9,33 @@ export default function Home() {
 
   return (
     <Layout>
-      <div style={{ padding: "20px 16px 6px" }}>
-        <h1 style={{ fontFamily: "var(--f-disp)", fontSize: 22, margin: "0 0 4px" }}>釣り場を選ぶ</h1>
-        <p style={{ margin: 0, color: "var(--ink-3)", fontSize: 13.5 }}>直近1週間に釣行のあった場所から。</p>
+      <div className="home-head">
+        <h1>釣り場を選ぶ</h1>
+        <p>直近1週間に釣行のあった場所から。釣況・スレッド・ルールは釣り場ごとにまとまっています。</p>
+        <Link to="/rankings" className="btn ghost" style={{ display: "inline-flex" }}>今週の回遊・大物ランキングを見る</Link>
       </div>
 
-      <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", padding: 16 }}>
+      <div className="spot-table">
         {(spots ?? []).map((s) => (
-          <Link key={s.slug} to={`/spots/${s.slug}`}
-            style={{ border: "1px solid var(--line)", borderRadius: 10, padding: "12px 14px", background: "var(--surface-2)" }}>
-            <div style={{ fontWeight: 700 }}>{s.name}</div>
-            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
-              {s.area.name} ・ {s.kind} ・ 釣行 <span className="num">{s._count.trips}</span>件
+          <Link key={s.slug} to={`/spots/${s.slug}`} className="spot-cell">
+            <div className="nm">{s.name}</div>
+            <div className="mt">
+              <span>{s.area.name}</span>
+              <span>{s.kind}</span>
+              <span>釣行 <span className="num">{s._count.trips}</span>件</span>
             </div>
           </Link>
         ))}
       </div>
 
-      <h2 style={{ fontFamily: "var(--f-disp)", fontSize: 15, margin: "18px 16px 0" }}>最近の釣況（全釣り場）</h2>
+      <h2 className="sec-head">
+        最近の釣況（全釣り場）
+        <Link to="/spots/new" className="more">＋ 釣り場を追加する</Link>
+      </h2>
       <ul className="list">
         {(trips ?? []).map((t) => <TripRow key={t.id} trip={t} />)}
       </ul>
+      {(trips ?? []).length === 0 && <p className="notice">直近1週間の釣行はまだありません。</p>}
     </Layout>
   );
 }

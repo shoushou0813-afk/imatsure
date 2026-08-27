@@ -45,15 +45,16 @@ export default function SpotRules() {
       <div className="body-grid">
         <SpotSidebar spots={spots ?? []} currentSlug={slug} />
         <main>
+          <div className="listhead">
+            <span>この釣り場のルール <b>{(rules ?? []).length}</b> 件</span>
+            <span className="note">危険・禁止から順に表示</span>
+            <span className="grow" />
+            {user && <button className="chip" onClick={() => setOpen((v) => !v)}>＋ ルール・現地情報を追加</button>}
+          </div>
           <div className="rules">
-            {error && <div className="error" style={{ marginBottom: 12 }}>{error}</div>}
-            {user && (
-              <button className="chip" style={{ marginBottom: 12 }} onClick={() => setOpen((v) => !v)}>
-                ＋ ルール・現地情報を追加
-              </button>
-            )}
+            {error && <div className="error" style={{ margin: 12 }}>{error}</div>}
             {open && (
-              <form className="form" style={{ padding: 0, marginBottom: 18 }} onSubmit={submit}>
+              <form className="form" onSubmit={submit}>
                 <div className="field"><label htmlFor="r-kind">種別</label>
                   <select id="r-kind" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
                     {KINDS.map((k) => <option key={k}>{k}</option>)}
@@ -74,7 +75,7 @@ export default function SpotRules() {
 
             {(rules ?? []).map((r) => (
               <div key={r.id} className={`rule-card${DANGER.has(r.kind) ? " danger" : ""}`}>
-                <h3>{r.kind}：{r.title}</h3>
+                <h3><span className="kind">{r.kind}</span>{r.title}</h3>
                 <p>{r.body}</p>
                 <div className="src">
                   {r.source && <span>出典：{r.source}</span>}
@@ -87,6 +88,7 @@ export default function SpotRules() {
           </div>
         </main>
         <aside className="pane-right">
+          <div className="pane-head">ルールについて</div>
           <div className="detail"><h3>なぜ最初にルールなのか</h3>
             <div className="dsub">
               釣果情報が広まると人が集まり、ゴミ・駐車トラブルから釣り禁止になる釣り場があります。

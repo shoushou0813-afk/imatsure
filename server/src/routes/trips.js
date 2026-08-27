@@ -7,15 +7,19 @@ import { deleteImage } from "../storage.js";
 
 const r = Router();
 
+// この人数が「現地の記録として確からしい」と確認したら検証済みバッジを出す。
+// rankings.js でも同じ値を使う（バッジの基準がずれないように）。
+export const VERIFY_THRESHOLD = 2;
+
 const tripInclude = {
-  user: { select: { id: true, handle: true, displayName: true } },
+  user: { select: { id: true, handle: true, displayName: true, trustScore: true } },
   spot: { select: { id: true, name: true, slug: true } },
   method: true,
   catches: { include: { fish: true } },
   // 一覧では写真そのものは出さない（テキストファースト）。
   // ただし「写真あり」の印と、詳細を開いた時の初期表示のために1枚だけサムネを持ってくる。
   photos: { select: { id: true, thumbUrl: true }, orderBy: { sortOrder: "asc" }, take: 1 },
-  _count: { select: { photos: true } },
+  _count: { select: { photos: true, verifications: true } },
 };
 
 /**
@@ -73,6 +77,11 @@ r.post("/", requireAuth, wrap(async (req, res) => {
            typeof p?.thumbUrl === "string" && p.thumbUrl.startsWith("/uploads/")
   );
 
+  // サイズの数値申告は、メジャー等と一緒に写った写真が無いと裏付けが取れない。
+  // 自動でメジャーの写り込みを判定しているわけではなく、あくまで「写真を添える」ことを必須にする運用ルール。
+  if (catches.some((c) => c.sizeCm != null && c.sizeCm !== "") && safePhotos.length === 0)
+    return res.status(400).json({ error: { message: "サイズを記録する場合は、メジャー等と一緒に写った写真を1枚以上添付してください" } });
+
   const trip = await prisma.trip.create({
     data: {
       userId: req.user.id,
@@ -120,6 +129,31 @@ r.patch("/:id", requireAuth, wrap(async (req, res) => {
     where: { id }, data: { note, precision, tideName, tidePhase }, include: tripInclude,
   });
   res.json({ data: updated });
+}));
+
+/**
+ * 「現地の記録として確からしい」と他の利用者が確認する。ルールの現地確認と同じ考え方で、
+ * サイズの自己申告を裏付ける手段が写真しかない釣行に、コミュニティでの裏付けを足す。
+ */
+r.post("/:id/verify", requireAuth, wrap(async (req, res) => {
+  const tripId = Number(req.params.id);
+  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+  if (!trip || trip.deletedAt) return res.status(404).json({ error: { message: "釣行が見つかりません" } });
+  if (trip.userId === req.user.id)
+    return res.status(400).json({ error: { message: "自分の釣行は確認できません" } });
+
+  try {
+    await prisma.tripVerification.create({ data: { tripId, userId: req.user.id } });
+  } catch {
+    return res.status(409).json({ error: { message: "すでに確認済みです" } });
+  }
+
+  const verifiedCount = await prisma.tripVerification.count({ where: { tripId } });
+  // ちょうど閾値に達した瞬間だけ加点する（確認が増えるたびに際限なく積み上がらないように）
+  if (verifiedCount === VERIFY_THRESHOLD)
+    await prisma.user.update({ where: { id: trip.userId }, data: { trustScore: { increment: 1 } } });
+
+  res.json({ data: { tripId, verifiedCount, verified: verifiedCount >= VERIFY_THRESHOLD } });
 }));
 
 /** 論理削除：他人のコメントが宙に浮かないよう、行そのものは残す。 */

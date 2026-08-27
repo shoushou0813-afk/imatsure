@@ -14,7 +14,10 @@ r.get("/", wrap(async (req, res) => {
       ...(spot ? { spot: { slug: String(spot) } } : {}),
       ...(category ? { category: String(category) } : {}),
     },
-    include: { user: userSel, spot: { select: { name: true, slug: true } }, _count: { select: { posts: true } } },
+    include: {
+      user: userSel, spot: { select: { name: true, slug: true } },
+      _count: { select: { posts: { where: { status: "active" } } } },
+    },
     orderBy: { lastPostedAt: "desc" },
     take: 50,
   });
@@ -27,7 +30,7 @@ r.get("/:id", wrap(async (req, res) => {
     include: {
       user: userSel,
       spot: { select: { name: true, slug: true } },
-      posts: { include: { user: userSel }, orderBy: { createdAt: "asc" } },
+      posts: { where: { status: "active" }, include: { user: userSel }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!thread) return res.status(404).json({ error: { message: "スレッドが見つかりません" } });

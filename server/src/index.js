@@ -11,6 +11,7 @@ import trips from "./routes/trips.js";
 import threads from "./routes/threads.js";
 import rules from "./routes/rules.js";
 import reports from "./routes/reports.js";
+import rankings from "./routes/rankings.js";
 import masters from "./routes/masters.js";
 import photos from "./routes/photos.js";
 import { UPLOAD_DIR } from "./storage.js";
@@ -51,6 +52,7 @@ app.use("/api/threads", threads);
 app.use("/api/rules", rules);
 app.use("/api/photos", photos);
 app.use("/api/reports", reports);
+app.use("/api/rankings", rankings);
 app.use("/api", masters);
 
 app.use((_req, res) => res.status(404).json({ error: { message: "そのAPIはありません" } }));

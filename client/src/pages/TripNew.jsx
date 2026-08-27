@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "../useApi";
-import { api } from "../api";
+import { api, qs } from "../api";
 import { useAuth } from "../auth";
 import Layout from "../components/Layout";
 import PhotoPicker from "../components/PhotoPicker";
@@ -26,15 +26,47 @@ export default function TripNew() {
     spotId: "", methodId: "",
     startedAt: new Date().toISOString().slice(0, 16),
     tideName: "大潮", tidePhase: "", note: "",
+    weather: "", windDir: "", windSpeed: "", waterTemp: "",
     precision: "area", // 既定はぼかし。ピンポイントは選ばないと出ない
   });
   const [catches, setCatches] = useState([{ fishId: "", sizeCm: "", count: 1 }]);
   const [photos, setPhotos] = useState([]);
   const [dateTouched, setDateTouched] = useState(false);
+  const [tideTouched, setTideTouched] = useState(false);
+  const [condTouched, setCondTouched] = useState(false);
+  const [condLoading, setCondLoading] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  /**
+   * 釣り場と開始日時から潮名・天候・風・水温の参考値を自動取得する。
+   * すでに自分で書き換えた欄は上書きしない（写真Exifの日時と同じ考え方）。
+   */
+  useEffect(() => {
+    const spot = (spots ?? []).find((s) => s.id === Number(form.spotId));
+    if (!spot || !form.startedAt) return;
+    let alive = true;
+    setCondLoading(true);
+    const at = new Date(form.startedAt).toISOString();
+    api.get(`/spots/${spot.slug}/conditions${qs({ at })}`)
+      .then((r) => {
+        if (!alive) return;
+        setForm((f) => ({
+          ...f,
+          tideName: tideTouched ? f.tideName : (r.data.tideName ?? f.tideName),
+          weather: condTouched ? f.weather : (r.data.weather ?? f.weather ?? ""),
+          windDir: condTouched ? f.windDir : (r.data.windDir ?? f.windDir ?? ""),
+          windSpeed: condTouched ? f.windSpeed : (r.data.windSpeed ?? f.windSpeed ?? ""),
+          waterTemp: condTouched ? f.waterTemp : (r.data.waterTemp ?? f.waterTemp ?? ""),
+        }));
+      })
+      .catch(() => {})
+      .finally(() => alive && setCondLoading(false));
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.spotId, form.startedAt, spots]);
 
   /** 写真のExifから撮影日時が読めたら、まだ手で触っていない日時欄に反映する。 */
   const applyTakenAt = (iso) => {
@@ -48,6 +80,12 @@ export default function TripNew() {
 
   const submit = async (e) => {
     e.preventDefault();
+    setError(null);
+    // サイズは自己申告なので、裏付けとして写真を必須にする（メジャー等が写っているかまでは判定できない）。
+    if (catches.some((c) => c.fishId && c.sizeCm) && photos.length === 0) {
+      setError("サイズを記録する場合は、メジャー等と一緒に写った写真を1枚以上添付してください");
+      return;
+    }
     setBusy(true);
     try {
       const payload = {
@@ -55,6 +93,8 @@ export default function TripNew() {
         spotId: Number(form.spotId),
         methodId: Number(form.methodId),
         startedAt: new Date(form.startedAt).toISOString(),
+        windSpeed: form.windSpeed !== "" ? Number(form.windSpeed) : null,
+        waterTemp: form.waterTemp !== "" ? Number(form.waterTemp) : null,
         catches: catches
           .filter((c) => c.fishId)
           .map((c) => ({ fishId: Number(c.fishId), sizeCm: c.sizeCm ? Number(c.sizeCm) : null, count: Number(c.count) || 1 })),
@@ -118,15 +158,32 @@ export default function TripNew() {
             <button type="button" className="chip" onClick={() => setCatches((cs) => [...cs, { fishId: "", sizeCm: "", count: 1 }])}>＋ 魚を追加</button>
             <button type="button" className="chip" onClick={() => setCatches([])}>ボウズだった</button>
           </div>
+          <p className="hint">サイズ（cm）を記録する場合、メジャー等と一緒に写った写真を1枚以上添付してください。</p>
         </div>
 
-        <div className="field"><label htmlFor="tide">潮</label>
+        <div className="field"><label htmlFor="tide">潮{condLoading && "（取得中…）"}</label>
           <div className="ctl">
             {TIDES.map((t) => (
               <button type="button" key={t} className={`chip${form.tideName === t ? " on" : ""}`}
-                onClick={() => set("tideName", t)}>{t}</button>
+                onClick={() => { setTideTouched(true); set("tideName", t); }}>{t}</button>
             ))}
-          </div></div>
+          </div>
+          <p className="hint">釣り場と開始日時から自動で見積もった値です（実際の潮回りと数日ずれることがあります）。違っていれば選び直してください。</p>
+        </div>
+
+        <div className="field"><label>天候・風・水温（自動取得の参考値）</label>
+          <div className="ctl">
+            <input placeholder="天気" value={form.weather} style={{ flex: 1, minWidth: 90 }}
+              onChange={(e) => { setCondTouched(true); set("weather", e.target.value); }} />
+            <input placeholder="風向" value={form.windDir} style={{ flex: 1, minWidth: 80 }}
+              onChange={(e) => { setCondTouched(true); set("windDir", e.target.value); }} />
+            <input type="number" placeholder="風速(m/s)" value={form.windSpeed} style={{ flex: 1, minWidth: 90 }}
+              onChange={(e) => { setCondTouched(true); set("windSpeed", e.target.value); }} />
+            <input type="number" placeholder="水温(℃)" value={form.waterTemp} style={{ flex: 1, minWidth: 90 }}
+              onChange={(e) => { setCondTouched(true); set("waterTemp", e.target.value); }} />
+          </div>
+          <p className="hint">釣り場と開始日時から自動取得した参考値です。実際と違えば書き換えてください。</p>
+        </div>
 
         <div className="field"><label htmlFor="note">ひとことメモ（次に来る人が助かる情報）</label>
           <textarea id="note" value={form.note} onChange={(e) => set("note", e.target.value)}

@@ -37,10 +37,16 @@ export default function SpotThreads() {
         <SpotSidebar spots={spots ?? []} currentSlug={slug} />
         <main>
           <div className="filters">
+            <span className="flabel">カテゴリ</span>
             <button className={`chip${cat === "" ? " on" : ""}`} onClick={() => setCat("")}>すべて</button>
             {CATEGORIES.map((c) => (
               <button key={c} className={`chip${cat === c ? " on" : ""}`} onClick={() => setCat(c)}>{c}</button>
             ))}
+          </div>
+
+          <div className="listhead">
+            <span>該当 <b>{(threads ?? []).length}</b> 件</span>
+            <span className="note">最後に書き込まれた順</span>
             <span className="grow" />
             {user && <button className="chip" onClick={() => setOpen((v) => !v)}>＋ スレッドを立てる</button>}
           </div>
@@ -82,6 +88,7 @@ export default function SpotThreads() {
           {(threads ?? []).length === 0 && <p className="notice">まだスレッドがありません。</p>}
         </main>
         <aside className="pane-right">
+          <div className="pane-head">スレッドについて</div>
           <div className="detail"><h3>スレッド</h3>
             <div className="dsub">質問・同行者募集・現地情報・雑談。釣況とは別に、会話が流れずに残る場所です。</div></div>
         </aside>

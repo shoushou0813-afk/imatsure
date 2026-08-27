@@ -25,7 +25,8 @@ model User {
   posts   Post[]
   rules   Rule[]
   reports Report[]
-  verifications RuleVerification[]
+  verifications     RuleVerification[]
+  tripVerifications TripVerification[]
 }
 
 model Area {
@@ -95,9 +96,23 @@ model Trip {
   method  Method  @relation(fields: [methodId], references: [id])
   catches Catch[]
   photos  Photo[]
+  verifications TripVerification[]
 
   @@index([spotId, startedAt])
   @@index([startedAt])
+}
+
+/// 「現地の記録として確からしい」と他の利用者が確認した記録。RuleVerificationと同じ考え方。
+model TripVerification {
+  id        Int      @id @default(autoincrement())
+  tripId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([tripId, userId])
 }
 
 model Catch {
@@ -155,6 +170,7 @@ model Post {
   userId    Int
   body      String
   replyToId Int?
+  status    String   @default("active") // active | hidden（通報の自動非表示用）
   createdAt DateTime @default(now())
 
   thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)

@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // 同じWi-Fiのスマホから実機確認できるように、LAN側にも公開する。
+    // /api はこのVite自身がサーバ(4000)へ中継するので、スマホからは同一オリジンに見える。
+    host: true,
     proxy: {
       "/api": { target: "http://localhost:4000", changeOrigin: true },
       // アップロードした画像もサーバ側にあるので、同じように転送する

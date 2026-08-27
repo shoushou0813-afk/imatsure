@@ -1,200 +1,335 @@
 /* イマツレのデザイントークン。
-   色は「役割」で名前を付ける（--accent = 釣況、--regu = 規制・注意）。
-   ダークモードは反転ではなく専用の値を組む。夜釣り・車中で使うため。 */
+   色は「役割」で名前を付ける（--accent = 釣況、--regu = 規制・注意、--hit = ピーク）。
+   ダークモードは反転ではなく専用の値を組む。夜釣り・車中で使うため。
+
+   見た目の方針：
+   日本の情報量が多いサイト（価格比較・グルメ・登山記録・掲示板）に共通する作りに寄せる。
+   角丸と影を控えて「線」で区切り、余白より情報密度を優先する。
+   飾りではなく、屋外で素早く読むための選択。 */
 :root{
   --ground:#EAF1F0; --surface:#FFFFFF; --surface-2:#F4F8F7; --surface-3:#E1EBEA;
-  --ink:#0E272B; --ink-2:#426066; --ink-3:#7A9399;
+  --zebra:#FAFCFC;                      /* 一覧の交互配色。行を目で追うためだけの色 */
+  /* --ink-3 は補助文字用。白地で4.5:1、選択行（--accent-soft）の上でも3:1を超える濃さにしてある。 */
+  --ink:#0E272B; --ink-2:#3C595F; --ink-3:#5E7A80;
   --line:#D2DEDC; --line-2:#B4C6C4;
   --accent:#0B5E6B; --accent-2:#12808F; --accent-soft:#D7E9EB; --on-accent:#FFFFFF;
   --regu:#9E1B67; --regu-soft:#F8E1EE;
-  --hit:#B84D14;
-  --radius:10px;
-  --shadow:0 1px 2px rgba(14,39,43,.06),0 8px 24px rgba(14,39,43,.06);
+  --hit:#B84D14; --hit-soft:#FBE8DC;
+  --radius:3px;                          /* 角丸は控えめに。情報が「箱」に見えすぎないように */
   --f-disp:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
   --f-body:"BIZ UDPGothic","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;
 }
 @media (prefers-color-scheme:dark){:root{
   --ground:#07161A; --surface:#0E2328; --surface-2:#132C31; --surface-3:#1B3940;
-  --ink:#E2EEEC; --ink-2:#9CB4B7; --ink-3:#6C888C;
+  --zebra:#112A2F;
+  --ink:#E2EEEC; --ink-2:#A8BFC2; --ink-3:#7C979B;
   --line:#1E3A3F; --line-2:#2E5157;
   --accent:#5CC6D4; --accent-2:#8AE0EA; --accent-soft:#123B44; --on-accent:#04191D;
   --regu:#F27CB8; --regu-soft:#3A1730;
-  --hit:#E8974E;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  --hit:#E8974E; --hit-soft:#3A2312;
 }}
 
 *{box-sizing:border-box}
-body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 a{color:inherit;text-decoration:none}
-:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px;border-radius:4px}
+:focus-visible{outline:2px solid var(--accent-2);outline-offset:1px}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
-
-.app{max-width:1280px;margin:0 auto;background:var(--surface);min-height:100vh;overflow-x:hidden;
-  border-left:1px solid var(--line);border-right:1px solid var(--line)}
-
-/* ヘッダ */
-.app-head{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--line)}
-.head-top{display:flex;align-items:center;gap:12px;padding:11px 16px}
-.logo{font-family:var(--f-disp);font-weight:900;font-size:17px;letter-spacing:.06em;color:var(--accent);white-space:nowrap;flex:none}
 .grow{flex:1}
-.spot-pick{display:flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:5px 13px;font-weight:700;font-size:14px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48vw;min-width:0}
-@media(max-width:640px){.spot-pick small{display:none}.head-top{gap:8px;padding:10px 12px}.linkbtn{padding:6px}}
-.spot-pick small{font-weight:400;color:var(--ink-3);font-size:11.5px}
-.linkbtn{font-size:13px;color:var(--ink-2);padding:6px 10px;border-radius:8px}
-.linkbtn:hover{background:var(--surface-2)}
 
-.tabs{display:flex;gap:2px;padding:0 10px;overflow-x:auto;scrollbar-width:none}
+/* 縦フレックスにして、中身が短いページでも左右のペインの罫線が下まで伸びるようにする。
+   途中で切れると「ここで終わり」に見えてしまい、情報サイトとしての枠が崩れる。 */
+.app{max-width:1180px;margin:0 auto;background:var(--surface);min-height:100vh;overflow-x:hidden;
+  display:flex;flex-direction:column;
+  border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.app > main,.app > .body-grid{flex:1}
+
+/* ---------- ヘッダ ---------- */
+/* 上段は細いユーティリティ帯、下段が釣り場名とタブ。情報サイトによくある二段構え。 */
+.app-head{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:2px solid var(--accent)}
+.head-top{display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.logo{font-family:var(--f-disp);font-weight:900;font-size:16px;letter-spacing:.04em;color:var(--accent);white-space:nowrap;flex:none}
+.logo::after{content:"釣況掲示板";display:inline-block;margin-left:7px;padding-left:7px;border-left:1px solid var(--line-2);
+  font-family:var(--f-body);font-size:10.5px;font-weight:400;letter-spacing:.02em;color:var(--ink-3);vertical-align:1px}
+.spot-pick{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(--ink-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw;min-width:0}
+.spot-pick small{font-weight:400;color:var(--ink-3);font-size:11px}
+.linkbtn{font-size:12.5px;color:var(--ink-2);padding:5px 8px;min-height:32px;display:inline-flex;align-items:center}
+.linkbtn:hover{color:var(--accent);text-decoration:underline}
+.linkbtn.primary{background:var(--accent);color:var(--on-accent);border-radius:var(--radius);font-weight:700;padding:5px 12px}
+.linkbtn.primary:hover{background:var(--accent-2);text-decoration:none}
+.linkbtn.on{color:var(--accent);font-weight:700}
+@media(max-width:640px){.spot-pick small{display:none}.head-top{gap:6px;padding:6px 10px}.logo::after{display:none}}
+
+/* パンくず。いまどの階層にいるかを常に文字で出す。 */
+.crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 14px 0;font-size:11.5px;color:var(--ink-3)}
+.crumbs a:hover{color:var(--accent);text-decoration:underline}
+.crumbs .sep{color:var(--line-2)}
+.crumbs .cur{color:var(--ink-2);font-weight:700}
+
+/* タブ：本文と地続きに見える、枠のあるタブ。 */
+.tabs{display:flex;gap:3px;padding:8px 14px 0;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tabs a{position:relative;padding:9px 14px 11px;font-size:14px;font-weight:700;color:var(--ink-3);white-space:nowrap}
-.tabs a.on{color:var(--ink)}
-.tabs a.on::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:3px;background:var(--accent);border-radius:3px 3px 0 0}
-.tab-badge{display:inline-block;margin-left:6px;background:var(--regu-soft);color:var(--regu);font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 6px}
+.tabs a{position:relative;bottom:-1px;padding:8px 16px;font-size:13.5px;font-weight:700;color:var(--ink-2);white-space:nowrap;
+  background:var(--surface-2);border:1px solid var(--line);border-bottom:none;
+  border-radius:var(--radius) var(--radius) 0 0;min-height:38px;display:flex;align-items:center}
+.tabs a:hover{color:var(--accent);background:var(--surface-3)}
+.tabs a.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tab-badge{display:inline-block;margin-left:6px;background:var(--regu);color:#fff;font-family:var(--f-mono);
+  font-size:10.5px;font-weight:700;border-radius:2px;padding:0 5px;line-height:16px}
+.tabs a.on .tab-badge{background:var(--on-accent);color:var(--accent)}
 
-/* 3ペイン（PC）。狭い画面では中央だけになる。 */
-.body-grid{display:grid;grid-template-columns:222px minmax(0,1fr) 330px;min-height:70vh}
+/* ---------- 3ペイン（PC） ---------- */
+.body-grid{display:grid;grid-template-columns:206px minmax(0,1fr) 310px;grid-template-rows:minmax(0,1fr)}
 /* グリッドの子は既定で min-width:auto のため、中身が広いと横スクロールが生まれる。
    min-width:0 を付けて「はみ出さずに縮む」ようにする。レイアウト崩れの定番原因。 */
 .body-grid > *{min-width:0}
-.pane-left{border-right:1px solid var(--line);background:var(--surface-2);padding:14px 10px}
-.pane-right{border-left:1px solid var(--line);background:var(--surface-2);padding:16px}
+.pane-left{border-right:1px solid var(--line);background:var(--surface-2);padding:0 0 14px}
+.pane-right{border-left:1px solid var(--line);background:var(--surface-2);padding:0 0 14px}
 @media(max-width:980px){
   .body-grid{grid-template-columns:1fr}
   .pane-left,.pane-right{display:none}
 }
-.side-label{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);font-weight:700;padding:10px 8px 6px}
-.side-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 9px;border-radius:8px;font-size:13.5px;color:var(--ink-2)}
-.side-item:hover{background:var(--surface-3)}
-.side-item.on{background:var(--accent-soft);color:var(--ink);font-weight:700}
-.side-item .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
-.side-item .dot.cold{background:var(--line-2)}
-.side-item .cnt{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
 
-/* サマリー */
-.summary{padding:14px 16px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface-2),var(--surface))}
-.summary h2{margin:0 0 10px;font-family:var(--f-disp);font-size:13px;letter-spacing:.06em;color:var(--ink-2);font-weight:700}
-.summary h2 b{color:var(--ink);font-size:15px}
-.sum-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-.sum-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px}
-.sum-card h3{margin:0 0 8px;font-size:11px;letter-spacing:.1em;color:var(--ink-3);font-weight:700}
-.rank{display:flex;flex-direction:column;gap:6px}
-.rank-row{display:flex;align-items:center;gap:8px;font-size:13.5px}
-.rank-row .nm{font-weight:700}
-.rank-bar{flex:1;height:7px;background:var(--surface-3);border-radius:4px;overflow:hidden;min-width:26px}
-.rank-bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
-.hero-num{font-family:var(--f-mono);font-weight:600;font-size:27px;line-height:1.2}
-.hero-sub{font-size:12px;color:var(--ink-3)}
-.hist{display:flex;align-items:flex-end;gap:2px;height:52px}
-.hist .b{flex:1;height:100%;background:var(--surface-3);border-radius:3px 3px 0 0;position:relative}
-.hist .b i{position:absolute;inset:auto 0 0 0;min-height:2px;background:var(--accent);border-radius:3px 3px 0 0}
+/* 見出し：左に色棒。日本の情報サイトで定番の、節の始まりを示す形。 */
+.side-label,.pane-head{font-size:11.5px;letter-spacing:.04em;color:var(--ink);font-weight:700;
+  padding:8px 12px;background:var(--surface-3);border-bottom:1px solid var(--line);
+  border-left:4px solid var(--accent);display:flex;align-items:center;gap:6px}
+.pane-head .cnt{margin-left:auto;color:var(--ink-3);font-weight:400}
+
+.side-item{display:flex;align-items:center;gap:7px;width:100%;text-align:left;padding:9px 12px;
+  font-size:13.5px;color:var(--ink-2);border-bottom:1px solid var(--line);min-height:40px}
+.side-item:hover{background:var(--surface-3);color:var(--accent)}
+.side-item.on{background:var(--surface);color:var(--ink);font-weight:700;
+  box-shadow:inset 3px 0 0 var(--accent)}
+.side-item .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
+.side-item .dot.cold{background:var(--line-2)}
+.side-item .cnt{margin-left:auto;font-family:var(--f-mono);font-variant-numeric:tabular-nums;
+  font-size:11.5px;color:var(--ink-3);background:var(--surface-3);border-radius:2px;padding:0 5px;line-height:17px}
+.side-item.on .cnt{background:var(--accent-soft);color:var(--accent)}
+.side-add{display:block;padding:10px 12px;font-size:12.5px;color:var(--accent);min-height:40px}
+.side-add:hover{text-decoration:underline}
+
+/* ---------- サマリー ---------- */
+.summary{padding:0;border-bottom:1px solid var(--line)}
+.summary h2{margin:0;padding:8px 14px;font-family:var(--f-body);font-size:12px;color:var(--ink);font-weight:700;
+  background:var(--surface-3);border-left:4px solid var(--accent)}
+.summary h2 b{font-size:13px}
+.summary h2 .sub{font-weight:400;color:var(--ink-3);font-size:11.5px}
+.sum-grid{display:grid;gap:0;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.sum-card{background:var(--surface);border-right:1px solid var(--line);padding:10px 13px 12px}
+.sum-card:last-child{border-right:none}
+.sum-card h3{margin:0 0 8px;font-size:11.5px;color:var(--ink-2);font-weight:700}
+.rank{display:flex;flex-direction:column;gap:5px}
+.rank-row{display:flex;align-items:center;gap:7px;font-size:13.5px}
+/* 順位の数字を出す。「何が一番釣れているか」を色ではなく数で伝える。 */
+.rank-row .no{font-family:var(--f-mono);font-size:10.5px;font-weight:700;color:var(--ink-3);
+  background:var(--surface-3);border-radius:2px;width:16px;line-height:16px;text-align:center;flex:none}
+.rank-row:first-child .no{background:var(--hit);color:#fff}
+.rank-row .nm{font-weight:700;white-space:nowrap}
+.rank-bar{flex:1;height:6px;background:var(--surface-3);border-radius:1px;overflow:hidden;min-width:24px}
+.rank-bar i{display:block;height:100%;background:var(--accent)}
+.rank-row:first-child .rank-bar i{background:var(--hit)}
+.hero-num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:600;font-size:26px;line-height:1.15}
+.hero-sub{font-size:11.5px;color:var(--ink-3)}
+.hist{display:flex;align-items:flex-end;gap:2px;height:50px}
+.hist .b{flex:1;height:100%;background:var(--surface-3);position:relative}
+.hist .b i{position:absolute;inset:auto 0 0 0;min-height:2px;background:var(--accent)}
 .hist .b.peak i{background:var(--hit)}
 .hist-axis{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);font-family:var(--f-mono);margin-top:3px}
+/* スマホでは要約を詰める。ここが高いと肝心の釣況リストが画面外に押し出され、
+   「1画面に釣行5件以上」が守れなくなる。 */
 @media(max-width:640px){
-  .sum-grid{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:84%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
-  .sum-card{scroll-snap-align:start}
-  .hist{height:38px}
+  .sum-grid{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:82%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .sum-grid::-webkit-scrollbar{display:none}
+  .sum-card{scroll-snap-align:start;border-right:1px solid var(--line);padding:8px 12px 9px}
+  .sum-card h3{margin-bottom:5px}
+  .rank{gap:3px}
+  .rank-row{font-size:13px}
+  .hist{height:30px}
+  .hero-num{font-size:22px}
 }
 
-/* フィルタ */
-.filters{display:flex;gap:7px;padding:10px 16px;overflow-x:auto;border-bottom:1px solid var(--line);
-  background:var(--surface);position:sticky;top:88px;z-index:6;scrollbar-width:none}
+/* ---------- 地図 ---------- */
+.spotmap{border-bottom:1px solid var(--line)}
+.spotmap-toggle{display:flex;align-items:center;gap:6px;width:100%;padding:8px 14px;font-size:12.5px;
+  color:var(--ink-2);min-height:38px;text-align:left;white-space:nowrap}
+/* アクセスメモは長いので、はみ出す分は省略記号で切る。折り返して2行になると一覧が下に押される。 */
+.spotmap-toggle .acc{overflow:hidden;text-overflow:ellipsis;min-width:0;color:var(--ink-3)}
+.spotmap-toggle:hover{background:var(--surface-2);color:var(--accent)}
+.spotmap-toggle .mk{font-family:var(--f-mono);font-size:11px;color:var(--accent)}
+.spotmap-frame{border-top:1px solid var(--line);background:var(--surface-2)}
+.spotmap-frame iframe{display:block;width:100%;height:230px;border:0}
+.spotmap-frame a{display:block;padding:7px 14px;font-size:12px;color:var(--accent);background:var(--surface);border-top:1px solid var(--line)}
+.spotmap-frame a:hover{text-decoration:underline}
+
+/* ---------- フィルタ ---------- */
+.filters{display:flex;gap:5px;align-items:center;padding:8px 14px;overflow-x:auto;
+  border-bottom:1px solid var(--line);background:var(--surface-2);position:sticky;top:100px;z-index:6;scrollbar-width:none}
 .filters::-webkit-scrollbar{display:none}
+.filters .flabel{font-size:11px;color:var(--ink-3);white-space:nowrap;flex:none;font-weight:700}
 @media(min-width:981px){.filters{flex-wrap:wrap;overflow:visible}}
-.chip{border:1px solid var(--line-2);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--ink-2);white-space:nowrap;background:var(--surface);min-height:32px}
+@media(max-width:980px){.filters{top:0}}
+.chip{border:1px solid var(--line-2);border-radius:var(--radius);padding:6px 11px;font-size:12.5px;color:var(--ink-2);
+  white-space:nowrap;background:var(--surface);min-height:34px;display:inline-flex;align-items:center}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
 .chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
 
-/* 釣況リスト：1行＝1釣行 */
-.list{list-style:none;margin:0;padding:0}
-.row{display:grid;gap:2px 12px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center;
-  grid-template-columns:74px minmax(0,1fr) auto}
-.row:hover{background:var(--surface-2)}
-.row.on{background:var(--accent-soft)}
-.row .when{grid-column:1;grid-row:1/3;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
-.fresh{font-size:10.5px;font-weight:700;letter-spacing:.06em;border-radius:5px;padding:1px 7px;border:1px solid transparent}
-.fresh.f0{background:var(--accent);color:var(--on-accent)}
-.fresh.f1{background:var(--accent-soft);color:var(--accent)}
-.fresh.f2{border-color:var(--line-2);color:var(--ink-2)}
-.fresh.f3{color:var(--ink-3)}
-.when .num{font-size:12px;color:var(--ink-2)}
-.catch{grid-column:2;grid-row:1;display:flex;flex-wrap:wrap;gap:5px 9px;align-items:baseline}
-.fish{font-weight:700;font-size:14.5px}
-.fish .sz{font-family:var(--f-mono);font-weight:600;font-size:13px;color:var(--ink-2);margin-left:3px}
-.fish .x{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
-.meta{grid-column:2;grid-row:2;display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;color:var(--ink-3)}
-.meta b{font-weight:700;color:var(--ink-2)}
-.rowend{grid-column:3;grid-row:1/3;display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:11.5px;color:var(--ink-3)}
-.avatar{width:22px;height:22px;border-radius:50%;background:var(--surface-3);display:grid;place-items:center;font-size:10px;font-weight:700;color:var(--ink-2)}
-@media(max-width:640px){.row{grid-template-columns:64px minmax(0,1fr) auto;padding:9px 13px}}
+/* 一覧の上に出る件数行。「全何件を見ているのか」を必ず文字で出す。 */
+.listhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 14px;
+  border-bottom:1px solid var(--line);background:var(--surface);font-size:12px;color:var(--ink-2)}
+.listhead b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px;color:var(--ink)}
+.listhead .note{color:var(--ink-3);font-size:11.5px}
 
-/* スレッド */
+/* ---------- 釣況リスト：1行＝1釣行 ---------- */
+.list{list-style:none;margin:0;padding:0}
+.row{display:grid;gap:1px 11px;padding:8px 14px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center;
+  grid-template-columns:66px minmax(0,1fr) auto}
+/* 交互配色。屋外でスクロールしながら行を見失わないための実用的な処理。 */
+.row:nth-child(even){background:var(--zebra)}
+.row:hover{background:var(--accent-soft)}
+.row.on{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.row .when{grid-column:1;grid-row:1/3;display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+.fresh{font-size:10.5px;font-weight:700;border-radius:2px;padding:1px 5px;border:1px solid transparent;line-height:15px}
+.fresh.f0{background:var(--hit);color:#fff}
+.fresh.f1{background:var(--accent);color:var(--on-accent)}
+.fresh.f2{background:var(--accent-soft);color:var(--accent)}
+.fresh.f3{color:var(--ink-3);border-color:var(--line-2)}
+.when .num{font-size:11.5px;color:var(--ink-2)}
+.catch{grid-column:2;grid-row:1;display:flex;flex-wrap:wrap;gap:3px 8px;align-items:baseline}
+.fish{font-weight:700;font-size:15px}
+.fish.skunk{font-weight:400;color:var(--ink-2)}
+.fish .sz{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:600;font-size:13px;color:var(--hit);margin-left:2px}
+.fish .x{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+.meta{grid-column:2;grid-row:2;display:flex;flex-wrap:wrap;gap:0 8px;font-size:12px;color:var(--ink-3)}
+.meta > *{position:relative;padding-right:8px}
+.meta > *::after{content:"";position:absolute;right:0;top:.35em;bottom:.35em;border-right:1px solid var(--line-2)}
+.meta > *:last-child{padding-right:0}
+.meta > *:last-child::after{display:none}
+.meta b{font-weight:700;color:var(--ink-2)}
+.rowend{grid-column:3;grid-row:1/3;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:11px;color:var(--ink-3)}
+.avatar{width:24px;height:24px;border-radius:2px;background:var(--surface-3);display:grid;place-items:center;
+  font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--ink-2)}
+@media(max-width:640px){.row{grid-template-columns:58px minmax(0,1fr) auto;padding:8px 11px;gap:1px 8px}}
+
+/* ---------- スレッド ---------- */
 .threads{list-style:none;margin:0;padding:0}
-.thread{padding:12px 16px;border-bottom:1px solid var(--line);display:block}
-.thread:hover{background:var(--surface-2)}
-.thread .tt{font-weight:700;font-size:15px;margin-bottom:3px}
-.thread .tm{font-size:12px;color:var(--ink-3);display:flex;gap:10px;flex-wrap:wrap}
-.tag{font-size:11px;border-radius:5px;padding:1px 7px;background:var(--surface-3);color:var(--ink-2);font-weight:700}
+.thread{padding:10px 14px;border-bottom:1px solid var(--line);display:block}
+.threads li:nth-child(even) .thread{background:var(--zebra)}
+.thread:hover{background:var(--accent-soft)}
+.thread .tt{font-weight:700;font-size:15px;margin-bottom:2px;color:var(--ink)}
+.thread:hover .tt{text-decoration:underline}
+.thread .tm{font-size:12px;color:var(--ink-3);display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.tag{font-size:11px;border-radius:2px;padding:1px 6px;background:var(--surface-3);color:var(--ink-2);font-weight:700;line-height:17px}
 .tag.質問{background:var(--accent-soft);color:var(--accent)}
 .tag.募集{background:var(--regu-soft);color:var(--regu)}
+.tag.現地情報{background:var(--hit-soft);color:var(--hit)}
+.tag.verified{background:var(--accent-soft);color:var(--accent);margin-left:8px;vertical-align:2px}
+.trust{font-weight:400;color:var(--ink-3)}
 
-/* ルール */
-.rules{padding:16px}
-.rule-card{border:1px solid var(--line);border-left-width:4px;border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;background:var(--surface-2)}
-.rule-card.danger{border-color:var(--regu);background:var(--regu-soft)}
-.rule-card h3{margin:0 0 5px;font-size:14.5px;font-family:var(--f-disp);font-weight:700}
+/* ---------- ルール ---------- */
+.rules{padding:0}
+.rule-card{border-bottom:1px solid var(--line);border-left:4px solid var(--line-2);padding:11px 14px;background:var(--surface)}
+.rule-card.danger{border-left-color:var(--regu);background:var(--regu-soft)}
+.rule-card h3{margin:0 0 4px;font-size:15px;font-family:var(--f-body);font-weight:700}
+.rule-card h3 .kind{display:inline-block;margin-right:7px;font-size:11px;border-radius:2px;padding:1px 6px;
+  background:var(--surface-3);color:var(--ink-2);vertical-align:2px;line-height:17px}
 .rule-card.danger h3{color:var(--regu)}
-.rule-card p{margin:0;font-size:13.5px}
-.rule-card .src{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:11.5px;color:var(--ink-2)}
-.verify{border:1px solid var(--line-2);border-radius:999px;padding:3px 11px;font-size:12px;background:var(--surface)}
+.rule-card.danger h3 .kind{background:var(--regu);color:#fff}
+/* ルール本文は安全に関わる「読ませる文」なので、本文サイズ（15px）を下回らせない。 */
+.rule-card p{margin:0;font-size:15px;color:var(--ink-2)}
+.rule-card .src{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:7px;font-size:11.5px;color:var(--ink-3)}
+.verify{border:1px solid var(--line-2);border-radius:var(--radius);padding:5px 11px;font-size:12px;
+  background:var(--surface);min-height:32px;color:var(--ink-2)}
+.verify:hover{border-color:var(--accent);color:var(--accent)}
 
-/* フォーム */
-.form{padding:16px;display:flex;flex-direction:column;gap:14px;max-width:640px}
-.field label{display:block;font-size:11.5px;letter-spacing:.08em;color:var(--ink-3);font-weight:700;margin-bottom:5px}
-.field input,.field textarea,.field select{width:100%;border:1px solid var(--line-2);border-radius:8px;padding:9px 11px;
-  font:inherit;font-size:15px;background:var(--surface);color:var(--ink)}
-.field textarea{min-height:96px;resize:vertical}
-.ctl{display:flex;flex-wrap:wrap;gap:7px}
-.btn{background:var(--accent);color:var(--on-accent);border-radius:10px;padding:12px 18px;font-weight:700;font-size:15px;text-align:center}
+/* ---------- フォーム ---------- */
+.form{padding:14px;display:flex;flex-direction:column;gap:13px;max-width:620px}
+.form h1{font-family:var(--f-body);font-size:16px;font-weight:700;margin:0;
+  padding:8px 12px;background:var(--surface-3);border-left:4px solid var(--accent)}
+.field label{display:block;font-size:12px;color:var(--ink-2);font-weight:700;margin-bottom:4px}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line-2);border-radius:var(--radius);padding:9px 10px;
+  font:inherit;font-size:15px;background:var(--surface);color:var(--ink);min-height:40px}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent)}
+.field textarea{min-height:92px;resize:vertical}
+.ctl{display:flex;flex-wrap:wrap;gap:6px}
+.btn{background:var(--accent);color:var(--on-accent);border-radius:var(--radius);padding:11px 20px;font-weight:700;
+  font-size:15px;text-align:center;min-height:44px}
+.btn:hover{background:var(--accent-2)}
 .btn.ghost{background:var(--surface);color:var(--ink-2);border:1px solid var(--line-2)}
+.btn.ghost:hover{background:var(--surface-2);color:var(--accent)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.error{background:var(--regu-soft);color:var(--regu);border-radius:8px;padding:10px 13px;font-size:13.5px;font-weight:700}
-.notice{padding:36px 16px;text-align:center;color:var(--ink-3);font-size:14px}
+.error{background:var(--regu-soft);color:var(--regu);border:1px solid var(--regu);border-radius:var(--radius);
+  padding:9px 12px;font-size:13.5px;font-weight:700}
+.notice{padding:30px 14px;text-align:center;color:var(--ink-3);font-size:14px}
+.loadmore{padding:16px 14px;text-align:center;color:var(--ink-3);font-size:12.5px;min-height:1em}
+.hint{font-size:12px;color:var(--ink-3);margin:5px 0 0;line-height:1.55}
 
-/* 詳細ペイン */
-.detail h3{margin:0 0 3px;font-family:var(--f-disp);font-size:18px;font-weight:900}
-.detail .dsub{font-size:12px;color:var(--ink-3);margin-bottom:12px}
-.dl-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin:0 0 14px}
-.dl-grid dt{color:var(--ink-3)}
-.dl-grid dd{margin:0;font-weight:700}
-.detail .note{font-size:13px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+/* ---------- 詳細ペイン ---------- */
+.detail{padding:12px 14px}
+.detail h3{margin:0 0 2px;font-family:var(--f-body);font-size:16px;font-weight:700}
+.detail .dsub{font-size:12px;color:var(--ink-3);margin-bottom:11px}
+/* 定義リストを表組みに見せる。仕様や条件は表で読ませたほうが速い。 */
+.dl-grid{display:grid;grid-template-columns:auto 1fr;gap:0;font-size:13.5px;margin:0 0 12px;
+  border:1px solid var(--line);border-bottom:none}
+.dl-grid dt{color:var(--ink-2);background:var(--surface-3);padding:6px 9px;border-bottom:1px solid var(--line);font-size:12.5px}
+.dl-grid dd{margin:0;font-weight:700;padding:6px 9px;border-bottom:1px solid var(--line);background:var(--surface)}
+/* 投稿者が書いたメモ本文。ここも本文扱いで15pxを守る。 */
+.detail .note{font-size:15px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--accent);padding:9px 11px}
 
-/* 下部タブバー（スマホ） */
-.tabbar{display:none;position:sticky;bottom:0;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--surface);z-index:9}
+/* ---------- ホーム ---------- */
+.home-head{padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+.home-head h1{font-family:var(--f-body);font-size:18px;font-weight:700;margin:0 0 3px}
+.home-head p{margin:0 0 10px;color:var(--ink-3);font-size:12.5px}
+
+/* 前週比の矢印。釣況ドメインの数字なので、上げ潮＝アクセント色、下げ＝補助文字色にとどめる（マゼンタ・オレンジは流用しない）。 */
+.trend{display:inline-flex;align-items:center;gap:3px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.trend.t-up{color:var(--accent)}
+.trend.t-down{color:var(--ink-3);font-weight:400}
+.trend.t-flat{color:var(--ink-3);font-weight:400}
+.spot-table{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0;border-bottom:1px solid var(--line)}
+.spot-cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 13px;background:var(--surface)}
+.spot-cell:hover{background:var(--accent-soft)}
+.spot-cell .nm{font-weight:700;font-size:15px;margin-bottom:2px}
+.spot-cell:hover .nm{text-decoration:underline;color:var(--accent)}
+.spot-cell .mt{font-size:12px;color:var(--ink-3);display:flex;gap:8px;flex-wrap:wrap}
+.sec-head{font-size:12px;font-weight:700;margin:0;padding:8px 14px;background:var(--surface-3);
+  border-left:4px solid var(--accent);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.sec-head .more{margin-left:auto;font-weight:400;font-size:11.5px;color:var(--accent)}
+
+/* ---------- 下部タブバー（スマホ） ---------- */
+.tabbar{display:none;position:sticky;bottom:0;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line-2);background:var(--surface);z-index:9}
 @media(max-width:980px){.tabbar{display:grid}}
-.tabbar a{padding:9px 0 11px;font-size:10.5px;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:3px;min-height:52px}
-.tabbar a.on{color:var(--accent);font-weight:700}
-.tabbar .ic{font-size:15px;line-height:1;font-family:var(--f-mono)}
+.tabbar a{padding:7px 0 8px;font-size:10.5px;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:2px;min-height:50px;justify-content:center}
+.tabbar a.on{color:var(--accent);font-weight:700;box-shadow:inset 0 2px 0 var(--accent)}
+.tabbar .ic{font-size:14px;line-height:1;font-family:var(--f-mono)}
+
+/* 指で操作する端末だけ、タップ領域を44pxまで広げる。
+   マウス環境で同じ高さにすると絞り込みが画面を占領して密度が落ちるため、入力方法で分ける。 */
+@media (pointer:coarse){
+  .chip,.verify,.linkbtn,.tabs a,.side-item,.spotmap-toggle{min-height:44px}
+  .photo-del{width:32px;height:32px}
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* ---------- 写真 ---------- */
-.hint{font-size:12px;color:var(--ink-3);margin:6px 0 0;line-height:1.6}
-.photo-strip{display:flex;gap:8px;flex-wrap:wrap}
-.photo-thumb{position:relative;width:88px;height:88px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.photo-strip{display:flex;gap:7px;flex-wrap:wrap}
+.photo-thumb{position:relative;width:84px;height:84px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line)}
 .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.photo-del{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;
-  background:rgba(14,39,43,.72);color:#fff;font-size:15px;line-height:1;display:grid;place-items:center}
-.photo-add{width:88px;height:88px;border:1px dashed var(--line-2);border-radius:8px;
-  color:var(--ink-2);font-size:13px;background:var(--surface-2)}
+.photo-del{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:2px;
+  background:rgba(14,39,43,.78);color:#fff;font-size:14px;line-height:1;display:grid;place-items:center}
+.photo-add{width:84px;height:84px;border:1px dashed var(--line-2);border-radius:var(--radius);
+  color:var(--ink-2);font-size:12.5px;background:var(--surface-2)}
+.photo-add:hover{border-color:var(--accent);color:var(--accent)}
 .photo-add:disabled{opacity:.6}
 
-.gallery{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));margin:0 0 14px}
-.gallery-item{padding:0;border-radius:8px;overflow:hidden;border:1px solid var(--line);aspect-ratio:4/3;background:var(--surface-2)}
+.gallery{display:grid;gap:4px;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));margin:0 0 12px}
+.gallery-item{padding:0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);aspect-ratio:4/3;background:var(--surface-2)}
 .gallery-item img{width:100%;height:100%;object-fit:cover;display:block}
 
-.lightbox{position:fixed;inset:0;z-index:50;background:rgba(4,20,24,.92);
-  display:grid;place-items:center;padding:20px}
-.lightbox img{max-width:100%;max-height:90vh;border-radius:8px}
-.lightbox-close{position:absolute;top:14px;right:16px;width:40px;height:40px;border-radius:50%;
-  background:rgba(255,255,255,.14);color:#fff;font-size:22px;line-height:1}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(4,20,24,.93);display:grid;place-items:center;padding:18px}
+.lightbox img{max-width:100%;max-height:90vh}
+.lightbox-close{position:absolute;top:12px;right:14px;width:44px;height:44px;border-radius:2px;
+  background:rgba(255,255,255,.16);color:#fff;font-size:20px;line-height:1}

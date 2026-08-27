@@ -4,7 +4,7 @@ import { freshness, hhmm, catchLabel } from "../format";
  * 釣況リストの1行 ＝ 1釣行。
  * 「1匹1行」にしないのがイマツレの設計の核。一覧が水増しされず、統計も正しく出る。
  */
-export default function TripRow({ trip, selected, onSelect }) {
+export default function TripRow({ trip, selected, onSelect, hideSpot = false }) {
   const f = freshness(trip.startedAt);
   return (
     <li
@@ -21,8 +21,9 @@ export default function TripRow({ trip, selected, onSelect }) {
       </div>
 
       <div className="catch">
+        {/* ボウズも立派な釣行情報なので、薄くしすぎず本文として読める濃さで出す */}
         {trip.catches.length === 0 ? (
-          <span className="fish" style={{ color: "var(--ink-3)" }}>ボウズ</span>
+          <span className="fish skunk">ボウズ</span>
         ) : (
           trip.catches.map((c) => {
             const { name, size, count } = catchLabel(c);
@@ -39,7 +40,8 @@ export default function TripRow({ trip, selected, onSelect }) {
 
       <div className="meta">
         <b>{trip.method.name}</b>
-        <span>{trip.spot.name}</span>
+        {/* 釣り場ボードでは全行が同じ釣り場なので出さない。1行が1段短くなり、一覧に多く入る。 */}
+        {!hideSpot && <span>{trip.spot.name}</span>}
         {trip.tideName && <span>{trip.tideName}{trip.tidePhase ? ` ${trip.tidePhase}` : ""}</span>}
         {trip.windDir && <span>{trip.windDir} {trip.windSpeed}m</span>}
         {/* 一覧に画像は出さない。「写真がある」という事実だけ文字で伝える */}
